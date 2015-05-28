@@ -3,6 +3,7 @@
  */
 
 //引入 gulp
+
 var gulp = require('gulp');
 
 //引入功能组件
@@ -16,6 +17,7 @@ var jshint = require('gulp-jshint');
 
 var sass = require('gulp-sass');
 var sourcemaps = require('gulp-sourcemaps');
+var header = require('gulp-header'); //文件头加banner
 
 
 var autoprefixer = require('gulp-autoprefixer');
@@ -41,6 +43,20 @@ var paths = {
     js: 'dev/js/**/*', //js文件相关目录
     img: 'dev/img/**/*', //图片相关
 };
+
+// 文件头
+var pkg = require('./package.json');
+var banner = ['/**',
+    ' * Updated Time: ' + new Date(),
+    ' * ' + pkg.name + ' - ' + pkg.description,
+    ' * @author: ' + pkg.author,
+    ' * @version: v' + pkg.version,
+    ' * @link: ' + pkg.url,
+    ' * @license: ' + pkg.license,
+    ' */',
+    ''
+].join('\n');
+
 
 gulp.task('clean', function(cb) {
     del(['build'], cb);
@@ -73,6 +89,7 @@ gulp.task('sass', function() {
             sourceRoot: 'dev/css/sass'
         }))
         .pipe(rename('dev.min.css'))
+        .pipe(header(banner))
         .pipe(gulp.dest('public/assets/css'));
 
     gulp.src(paths.sass)
@@ -83,6 +100,7 @@ gulp.task('sass', function() {
         .pipe(gulp.dest(paths.css))
         .pipe(minifycss())
         .pipe(rename('all.min.css'))
+        .pipe(header(banner))
         .pipe(gulp.dest('public/assets/css'));
 
 });
@@ -108,9 +126,11 @@ gulp.task('scripts', ['clean'], function() {
         .pipe(jshint.reporter(stylish))
         .pipe(uglify())
         .pipe(concat('all.min.js'))
+        .pipe(header(banner))
         .pipe(gulp.dest('public/assets/js'))
         .pipe(rename('dev.min.js'))
         .pipe(sourcemaps.write())
+        .pipe(header(banner))
         .pipe(gulp.dest('public/assets/js'));
 
 });
