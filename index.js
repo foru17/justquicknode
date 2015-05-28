@@ -32,6 +32,7 @@ app.use(bodyParser.urlencoded({
 }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(favicon(__dirname + '/public/favicon.ico'));
 
 app.set('views', path.join(__dirname, 'views')); //设置模板页面
 app.set('view engine', 'ejs'); //载入ejs模板
@@ -42,3 +43,6 @@ app.listen(app.get('port'), function() {
     console.log('服务器启动,端口: ' + app.get('port'));
 })
 
+app.get("/", function(req, res) {
+    res.render("index");
+});

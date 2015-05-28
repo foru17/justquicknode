@@ -1,0 +1,17 @@
+
+// $imgPath:"../../img";
+$imgPath:"../../assets/images";
+$fontPath:"../../assets/fonts";
+
+
+@mixin word-wrap {
+white-space: nowrap;
+overflow: hidden;
+text-overflow: ellipsis;
+}
+
+@mixin word-wrap-multi{
+white-space: normal;
+overflow: hidden;
+text-overflow: ellipsis;
+}
