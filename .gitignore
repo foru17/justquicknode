@@ -3,7 +3,7 @@
 .sass-cache/*
 css/*.map
 
-# bundling output
+# bundling output 生产环境编译的代码无需上传
 build/*
 build
 dist/*
@@ -22,4 +22,9 @@ node_modules
 # Not-Needed System Files
 *.swp
 *.bak
+
+newrelic_agent.log
+#临时文件
+cdn.json
+
 
