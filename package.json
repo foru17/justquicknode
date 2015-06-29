@@ -1,10 +1,10 @@
 {
-  "name": "yi-activity",
+  "name": "justquick node",
   "version": "1.0.0",
   "author": "luolei",
   "license": "ISC",
-  "description": "Yi tech Activity Shooter Graduation",
-  "url": "http://www.xiaoyi.com",
+  "description": "Just Quick Node",
+  "url": "http://luolei.org",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

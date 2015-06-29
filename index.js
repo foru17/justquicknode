@@ -1,12 +1,17 @@
 /**
- * Project:小蚁微信活动Node中间层服务
- * Author:luo.lei@xiaoyi.com
+ * Project:快速创建Node项目
+ * Author:i@luolei.org
  */
 
 
 'use strict'
 // require('newrelic'); //参考newrelic官方说明
 var express = require('express');
+var app = express();
+if (app.get('env') == 'production') {
+    // require('newrelic');
+}
+
 var http = require('http');
 var path = require('path');
 var compress = require('compression'); //压缩资源 放在顶部
@@ -23,7 +28,6 @@ var _ = require('underscore'); //引入underscore
 // 基础配置
 var i18n = require('i18n'); //国际化模块
 // 初始Init
-var app = express();
 i18n.configure({
     locales: ['en-us', 'zh-cn', 'zh-tw'], // setup some locales - other locales default to en_US silently
     defaultLocale: 'zh-CN',
@@ -50,8 +54,13 @@ app.use(favicon(__dirname + '/public/favicon.ico'));
 
 console.log(__dirname + '/public/favicon.ico');
 
-app.set('views', path.join(__dirname, 'views')); //设置模板页面 本地测试
-// app.set('views', path.join(__dirname, 'online/views')); //线上请使用CDN版本
+if (app.get('env') == 'production') {
+    app.set('views', path.join(__dirname, 'online/views')); //线上请使用CDN版本
+}
+if (app.get('env') == 'development') {
+    app.set('views', path.join(__dirname, 'views')); //设置模板页面 本地测试
+}
+
 app.set('view engine', 'ejs'); //载入ejs模板
 
 app.set('port', process.env.PORT || 3132); //默认端口
