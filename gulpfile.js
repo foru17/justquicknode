@@ -3,7 +3,6 @@
  */
 
 //引入 gulp
-
 var gulp = require('gulp');
 
 //引入功能组件
@@ -17,75 +16,48 @@ var jshint = require('gulp-jshint');
 
 var sass = require('gulp-sass');
 var sourcemaps = require('gulp-sourcemaps');
-var header = require('gulp-header'); //文件头加banner
+
 
 
 var autoprefixer = require('gulp-autoprefixer');
 var minifycss = require('gulp-minify-css');
 var rename = require('gulp-rename');
 
-// 发布缓存
-var RevAll = require('gulp-rev-all');
-var revReplace = require('gulp-rev-replace'); //这个可用
-var qiniu = require('gulp-qiniu'); //上传到七牛
-var qiniuConfig = require('./qiniuconfig.js');
-
-
 // 图像处理
 
-// var imagemin = require('gulp-imagemin'); //十分大
-//var pngquant = require('imagemin-pngquant');
-// var spritesmith = require('gulp.spritesmith');
-// var imageResize = require('gulp-image-resize');
+var imagemin = require('gulp-imagemin'); //十分大
+var pngquant = require('imagemin-pngquant');
+var spritesmith = require('gulp.spritesmith');
+var imageResize = require('gulp-image-resize');
 
 
 // 错误处理
 var plumber = require("gulp-plumber");
 var stylish = require("jshint-stylish");
 
-//开发辅助依赖
-var nodemon = require('gulp-nodemon') //node watch
-var chalk = require('chalk');
+// 开发辅助
+var pkg = require('./package.json'); //获得配置文件中相关信息
+var chalk = require('chalk'); //美化日志
+var dateFormat = require('dateformat'); //获得自然时间
+
+// 打包发布
+var zip = require('gulp-zip');
+
+
 
 // 设置相关路径
 var paths = {
-    assets: 'public/assets',
+    assets: 'assets',
     sass: 'dev/css/sass/**/*',
     css: 'dev/css',
     js: 'dev/js/**/*', //js文件相关目录
     img: 'dev/img/**/*', //图片相关
 };
 
-// 文件头
-var pkg = require('./package.json');
-var banner = ['/**',
-    ' * Hello World',
-    ' * Updated Time: ' + new Date(),
-    ' * ' + pkg.name + ' - ' + pkg.description,
-    ' * @author: ' + pkg.author,
-    ' * @version: v' + pkg.version,
-    ' * @link: ' + pkg.url,
-    ' * @license: ' + pkg.license,
-    ' */',
-    ''
-].join('\n');
-
-
 gulp.task('clean', function(cb) {
     del(['build'], cb);
 });
 
-// 图片精灵处理
-gulp.task('sprite', function() {
-    var spriteData = gulp.src('dev/img/sprite/*.png').pipe(spritesmith({
-        imgName: 'sprite@2x.png',
-        cssName: '_sprite.scss',
-        algorithm: 'alt-diagonal'
-    }));
-    spriteData.img.pipe(gulp.dest('dev/img/')); // 输出合成图片
-    spriteData.css.pipe(gulp.dest('dev/css/sass/')); // 输出的CSS
-    // spriteData.pipe(gulp.dest('path/to/output/'));
-});
 
 
 // Sass 处理
@@ -94,27 +66,23 @@ gulp.task('sass', function() {
         .pipe(plumber())
         .pipe(sourcemaps.init())
         .pipe(sass())
-        .pipe(gulp.dest(paths.css))
         .pipe(concat('style.css'))
         .pipe(gulp.dest(paths.css))
         .pipe(minifycss())
         .pipe(sourcemaps.write({
-            sourceRoot: 'dev/css/sass'
+            sourceRoot: '/css/sass'
         }))
         .pipe(rename('dev.min.css'))
-        .pipe(header(banner))
-        .pipe(gulp.dest('public/assets/css'));
+        .pipe(gulp.dest('assets/css'));
 
     gulp.src(paths.sass)
         .pipe(plumber())
         .pipe(sass())
-        .pipe(gulp.dest(paths.css))
         .pipe(concat('style.css'))
         .pipe(gulp.dest(paths.css))
         .pipe(minifycss())
         .pipe(rename('all.min.css'))
-        .pipe(header(banner))
-        .pipe(gulp.dest('public/assets/css'));
+        .pipe(gulp.dest('assets/css'));
 
 });
 
@@ -129,7 +97,7 @@ gulp.task('lint', function() {
 });
 
 
-gulp.task('scripts', ['clean'], function() {
+gulp.task('scripts', function() {
     // Minify and copy all JavaScript (except vendor scripts)
     // with sourcemaps all the way down
     gulp.src(paths.js)
@@ -139,12 +107,10 @@ gulp.task('scripts', ['clean'], function() {
         .pipe(jshint.reporter(stylish))
         .pipe(uglify())
         .pipe(concat('all.min.js'))
-        .pipe(header(banner))
-        .pipe(gulp.dest('public/assets/js'))
+        .pipe(gulp.dest('assets/js'))
         .pipe(rename('dev.min.js'))
         .pipe(sourcemaps.write())
-        .pipe(header(banner))
-        .pipe(gulp.dest('public/assets/js'));
+        .pipe(gulp.dest('assets/js'));
 
 });
 
@@ -160,88 +126,93 @@ gulp.task('image', function() {
             }],
             use: [pngquant()]
         }))
-        .pipe(gulp.dest('public/assets/images'));
+        .pipe(gulp.dest('assets/images'));
+});
+
+/**
+ * 自动生成图片精灵
+ * $ gulp sprite
+ * algorithm排列有top-down,left-right,diagonal,alt-diagonal,binary-tree五种方式，根据需求选择
+ * 参考:https://github.com/Ensighten/spritesmith#algorithms
+ * 此task生成的为@2x的高清图
+ */
+
+
+gulp.task('retinasprite', function(cb) {
+    del(['dev/img/*.png'], function() {
+        console.log(chalk.red('[清理] 删除旧有精灵'))
+    });
+    var spriteData = gulp.src('dev/sprites/*.png').pipe(spritesmith({
+        imgName: 'sprite@2x.png',
+        cssName: '_sprite.scss',
+        algorithm: 'binary-tree',
+        padding: 10 //建议留白10像素
+    }));
+    spriteData.img.pipe(gulp.dest('dev/img/')); // 输出合成图片
+    spriteData.css.pipe(gulp.dest('dev/css/sass/')).on('end',cb)
+    console.log(chalk.green('[缩略] 生成高清图'))
 });
 
 
-gulp.task('dev', function() {
-        console.log( pkg.description);
-    nodemon({
-        script: 'index.js',
-        ext: 'js html',
-        ignore: ['dev/*', 'public/*']
-    }).on('restart', function(changedFiles) {
-        changedFiles.forEach(function(file) {
-            console.log(chalk.red('[File Changed]') + chalk.green(file));
-        })
-        console.log(chalk.green('[nodemon] 服务重新启动'));
-    })
+/**
+ * 自动生成标准图片精灵
+ * 执行 gulp sprite后会在 retinasprite task执行后自动缩放50%
+ */
+
+gulp.task('standardsprite',['retinasprite'],function(cb){
+    console.log(chalk.green('[缩略] 生成标清图'))
+    gulp.src('dev/img/sprite@2x.png').pipe(imageResize({
+            width: '50%'
+    }))
+    .pipe(rename('sprite.png'))
+    .pipe(gulp.dest('dev/img/')).on('end',cb)
+
+})
+gulp.task('sprite2assets',['retinasprite','standardsprite'],function(){
+    console.log(chalk.green('[转移] 复制精灵图到资源目录'))
+    gulp.src('dev/img/*.png').pipe(gulp.dest('assets/images/'))
 })
 
-// 发布
-gulp.task('revall', function() {
-    del(['build'], function() {
-        console.log(chalk.red('[清理] 删除旧有build'));
-    });
-    var revAll = new RevAll({
-        // prefix: 'http://7xjf0o.com2.z0.glb.qiniucdn.com/',
-        dontRenameFile: [/^\/favicon.ico$/g]
-    });
-    return gulp.src(['public/**'])
-        .pipe(revAll.revision())
-        .pipe(gulp.dest('build/'))
-        .pipe(revAll.manifestFile())
-        .pipe(gulp.dest('build/assets'))
-        .pipe(revAll.versionFile())
-        .pipe(gulp.dest('build/assets'));
-
-});
-
-
-// 发布build之后的assets静态资源到七牛CDN
-gulp.task('cdn', function() {
-    console.log(chalk.red('[CDN]') + chalk.green(' [七牛] ') + chalk.green(qiniuConfig.Bucket_Name));
-    gulp.src('./build/assets/**')
-        .pipe(qiniu({
-            accessKey: qiniuConfig.ACCESS_KEY,
-            secretKey: qiniuConfig.SECRET_KEY,
-            bucket: qiniuConfig.Bucket_Name,
-            private: false
-        }, {
-            dir: pkg.name + '/assets/',
-            versionFile: './cdn.json'
-        }))
-});
-
-// 更新ejs模板中的url路劲
-gulp.task('indexmap', function() {
-    del(['online/views'], function() {
-        console.log(chalk.red('[清理] 删除旧有Views'));
-    });
-    var manifest = gulp.src("./build/assets/rev-manifest.json");
-    return gulp.src("views/**/*.ejs") // Minify any CSS sources
-        .pipe(rename({
-            extname: '.html'
-        }))
-        .pipe(revReplace({
-            manifest: manifest,
-            prefix: qiniuConfig.Domain + pkg.name + '/'
-        }))
-        .pipe(rename({
-            extname: '.ejs'
-        }))
-        .pipe(gulp.dest('online/views'))
-
-    del(['views/*.html']);
-
-});
-
-
 gulp.task('watch', function() {
+    console.log(chalk.green('[监听] 启动gulp watch自动编译'))
     gulp.watch(paths.js, ['scripts']);
     gulp.watch(paths.sass, ['sass']);
 });
 
+/**
+ * 生成最终交付文件夹
+ * $ gulp build
+ *
+ */
+gulp.task('build', function() {
+    del(['build'], function() {
+        console.log(chalk.red('[清理] 删除旧有build文件夹'))
+    });
+    gulp.src('*.html').pipe(gulp.dest('build'))
+    gulp.src('assets/**/!(*dev*)*').pipe(gulp.dest('build/assets'))
+});
+
+
+/**
+ * 压缩最终的文件
+ * 自动增加当前时间戳 + 项目名称
+ * $ gulp zip
+ */
+
+gulp.task('zip', function() {
+    var now = new Date();
+    del(['zipped/*.zip'], function() {
+        console.log(chalk.red('[清理] 删除旧有压缩包'))
+    });
+    console.log(chalk.red('[压缩] 打包最终文件'))
+    gulp.src('build/**/*')
+        .pipe(zip(dateFormat(now, 'yyyy-mmmm-dS-h-MMTT') + '-' + pkg.name + '.zip'))
+        .pipe(gulp.dest('zipped/'))
+});
+
+
+
+
+gulp.task('sprite', ['retinasprite', 'standardsprite','sprite2assets']);
 gulp.task('default', ['watch', 'scripts']);
 gulp.task('watch:base', ['watch']);
-gulp.task('release:cdn', ['revall', 'cdn', 'indexmap']);
